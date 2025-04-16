@@ -67,13 +67,24 @@ export default function VipSignupForm() {
     if (emailParam) {
       setEmail(emailParam);
       
-      // If user is authenticated, pre-fill the form with Auth0 user data
-      if (isAuthenticated && user) {
+      // Check for saved form data first - retrieve it but don't set it yet
+      const savedData = localStorage.getItem('vipSignupData');
+      let parsedData = null;
+      
+      if (savedData) {
+        try {
+          parsedData = JSON.parse(savedData);
+        } catch (e) {
+          console.error("Error parsing saved form data:", e);
+        }
+      }
+      
+      // Only use Auth0 data if we don't have saved form data
+      if (isAuthenticated && user && !parsedData) {
         setFormData(prev => ({
           ...prev,
           firstName: user.given_name || user.name?.split(' ')[0] || '',
           lastName: user.family_name || user.name?.split(' ').slice(1).join(' ') || '',
-          // Don't override other fields that might be set already
         }));
       }
     } else {
@@ -322,6 +333,7 @@ export default function VipSignupForm() {
           const parsedData = JSON.parse(savedData);
           // Make sure we're on the right email before restoring data
           if (parsedData.email === email) {
+            // Always use the user's entered data from before Auth0 redirect
             setFormData({
               firstName: parsedData.firstName || '',
               lastName: parsedData.lastName || '',
