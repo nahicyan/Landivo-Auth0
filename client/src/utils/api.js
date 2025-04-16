@@ -1,6 +1,8 @@
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useCallback } from 'react';
 
 export const api = axios.create({
   baseURL: `${import.meta.env.VITE_SERVER_URL}/api`, //
@@ -481,12 +483,76 @@ export const getDealFinancialSummary = async (id) => {
   }
 };
 
+// Create a custom hook for authenticated user profile operations
+export function useUserProfileApi() {
+  const { getAccessTokenSilently } = useAuth0();
+  
+  // Get user profile - with auth token
+  const getUserProfile = useCallback(async () => {
+    try {
+      // Get the Auth0 token first
+      const token = await getAccessTokenSilently();
+      
+      // Make the API request with the token in the Authorization header
+      const response = await api.get('/user/profile', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      if (error.response?.status === 401) {
+        // Token might be expired or invalid
+        console.log("Authentication error: Your session may have expired");
+      }
+      throw error;
+    }
+  }, [getAccessTokenSilently]);
+  
+  // Update user profile - with auth token
+  const updateUserProfile = useCallback(async (profileData) => {
+    try {
+      // Get the Auth0 token first
+      const token = await getAccessTokenSilently();
+      
+      // Make the API request with the token in the Authorization header
+      const response = await api.put('/user/profile', profileData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      if (error.response?.status === 401) {
+        // Token might be expired or invalid
+        console.log("Authentication error: Your session may have expired");
+      }
+      throw error;
+    }
+  }, [getAccessTokenSilently]);
+  
+  // Return the functions
+  return {
+    getUserProfile,
+    updateUserProfile
+  };
+}
+
 /**
  * Get user profile from database 
  * @returns {Promise<Object>} User profile data
  */
 export const getUserProfile = async () => {
   try {
+    // This function requires authentication, so we need to get the token
+    // from the Auth0 provider - but since this isn't a React component, this
+    // will not work correctly. This is why we need the hook approach above.
+    console.warn("getUserProfile should be called from within a component using useUserProfileApi()");
+    
     const response = await api.get('/user/profile');
     return response.data;
   } catch (error) {
@@ -501,6 +567,11 @@ export const getUserProfile = async () => {
  */
 export const updateUserProfile = async (profileData) => {
   try {
+    // This function requires authentication, so we need to get the token
+    // from the Auth0 provider - but since this isn't a React component, this
+    // will not work correctly. This is why we need the hook approach above.
+    console.warn("updateUserProfile should be called from within a component using useUserProfileApi()");
+    
     const response = await api.put('/user/profile', profileData);
     return response.data;
   } catch (error) {

@@ -107,7 +107,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { auth0Id },
       include: {
-        ownedResidencies: {
+        createdResidencies: {
           select: {
             id: true,
             title: true,
@@ -215,7 +215,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         createdAt: "desc"
       },
       include: {
-        ownedResidencies: {
+        createdResidencies: {
           select: {
             id: true
           }
@@ -243,7 +243,7 @@ export const getUserById = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
-        ownedResidencies: {
+        createdResidencies: {
           select: {
             id: true,
             title: true,

@@ -25,7 +25,7 @@ import {
 import Auth0DebugComponent from '@/components/Auth0/Auth0DebugComponent';
 import { useVipBuyer } from '@/utils/VipBuyerContext';
 import { StarIcon } from '@heroicons/react/24/solid';
-import { getUserProfile, updateUserProfile } from '@/utils/api';
+import { useUserProfileApi } from '@/utils/api'; // Import the new custom hook
 
 const Profile = () => {
   const { 
@@ -39,6 +39,9 @@ const Profile = () => {
   const permissions = usePermissions();
   const { isVipBuyer, vipBuyerData, isLoading: vipStatusLoading } = useVipBuyer();
   
+  // Use our new authenticated API functions
+  const { getUserProfile, updateUserProfile } = useUserProfileApi();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     firstName: '',
@@ -47,12 +50,14 @@ const Profile = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [dbUserData, setDbUserData] = useState(null);
+  const [profileError, setProfileError] = useState(null);
 
   // Load user profile data
   useEffect(() => {
     const loadUserProfile = async () => {
       if (isAuthenticated && user?.sub) {
         try {
+          setProfileError(null);
           const userProfile = await getUserProfile();
           if (userProfile) {
             setDbUserData(userProfile);
@@ -63,18 +68,20 @@ const Profile = () => {
           }
         } catch (error) {
           console.error("Error loading user profile:", error);
+          setProfileError("Unable to load your profile information. Please try again later.");
         }
       }
     };
     
     loadUserProfile();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, getUserProfile]);
 
-  // Handle profile form submission
+  // Handle profile form submission with the authenticated update function
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setUpdateSuccess(false);
+    setProfileError(null);
     
     try {
       await updateUserProfile(profileData);
@@ -89,6 +96,7 @@ const Profile = () => {
       });
     } catch (error) {
       console.error("Error updating profile:", error);
+      setProfileError("Failed to update your profile. Please try again later.");
     } finally {
       setIsSubmitting(false);
     }
@@ -107,6 +115,28 @@ const Profile = () => {
             <p className="mt-2 text-text-500">Please log in to view your profile</p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Show error message if profile loading failed
+  if (profileError && !isLoading) {
+    return (
+      <div className="container max-w-4xl mx-auto py-8 px-4">
+        <Alert className="bg-red-50 border-red-200">
+          <AlertTitle className="text-red-800">Error Loading Profile</AlertTitle>
+          <AlertDescription className="text-red-700">
+            {profileError}
+          </AlertDescription>
+          <div className="mt-4">
+            <Button 
+              onClick={() => window.location.reload()}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Retry
+            </Button>
+          </div>
+        </Alert>
       </div>
     );
   }
@@ -273,6 +303,15 @@ const Profile = () => {
                       <AlertTitle className="text-green-800">Success!</AlertTitle>
                       <AlertDescription className="text-green-700">
                         Your profile has been updated successfully.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {profileError && (
+                    <Alert className="mt-4 bg-red-50 border-red-200">
+                      <AlertTitle className="text-red-800">Error</AlertTitle>
+                      <AlertDescription className="text-red-700">
+                        {profileError}
                       </AlertDescription>
                     </Alert>
                   )}
