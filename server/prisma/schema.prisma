@@ -19,9 +19,7 @@ model User {
   loginCount       Int         @default(0)
   isActive         Boolean     @default(true)
   
-  // User may still have owned Residencies, but they're connected differently now
-  ownedResidencies Residency[] @relation("OwnerRelation")
-  
+
   // For auditing - track who created/modified records
   createdResidencies    Residency[]      @relation("CreatedByRelation")
   updatedResidencies    Residency[]      @relation("UpdatedByRelation")
@@ -71,8 +69,7 @@ model Residency {
   id        String @id @default(auto()) @map("_id") @db.ObjectId
   
   // Owner relationship changed to use userId instead of email
-  ownerId   String    @db.ObjectId
-  owner     User      @relation("OwnerRelation", fields: [ownerId], references: [id])
+  ownerId   Int?
   
   // Audit fields
   createdById  String  @db.ObjectId
@@ -95,6 +92,7 @@ model Residency {
   direction          String?
   status             String?
   type               String?
+  landType           String[]
   zoning             String?
   restrictions       String?
   mobileHomeFriendly String?
@@ -255,7 +253,7 @@ model Qualification {
   id             String  @id @default(auto()) @map("_id") @db.ObjectId
   propertyId     String? // ID of the property being qualified for
   propertyPrice  Float // Asking or financed price
-  ownerId        Int?
+  ownerId        String?
   loanAmount     Float? // Selected loan amount
   interestRate   Float? // Selected interest rate
   monthlyPayment Float? // Calculated monthly payment
