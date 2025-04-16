@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createResidencyWithFiles } from "@/utils/api";
 import {
@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserContext } from "../../utils/UserContext";
+import { useAuth } from "@/components/hooks/useAuth"; // Import useAuth instead of UserContext
 import { motion, AnimatePresence } from "framer-motion";
 
 // Import subcomponents
@@ -31,7 +31,7 @@ import { Check } from "lucide-react";
 
 export default function AddProperty() {
   const navigate = useNavigate();
-  const { currentUser } = useContext(UserContext);
+  const { user } = useAuth(); // Use Auth hook instead of UserContext
 
   // Current step index
   const [step, setStep] = useState(0);
@@ -44,7 +44,6 @@ export default function AddProperty() {
   // Form data state
   const [formData, setFormData] = useState({
     // System Information
-    userEmail: "",
     ownerId: "",
     status: "",
     area: "",
@@ -58,6 +57,7 @@ export default function AddProperty() {
 
     // Classification
     type: "",
+    landType: [], // Now an array
     legalDescription: "",
     zoning: "",
     restrictions: "",
@@ -125,13 +125,6 @@ export default function AddProperty() {
 
   // If you need to store images in the parent:
   const [uploadedImages, setUploadedImages] = useState([]);
-
-  // Auto-set user email
-  useEffect(() => {
-    if (currentUser?.email) {
-      setFormData((prev) => ({ ...prev, userEmail: currentUser.email }));
-    }
-  }, [currentUser]);
 
   // Numeric fields formatting, etc.
   const handleChange = (e) => {
@@ -232,11 +225,19 @@ export default function AddProperty() {
       const multipartForm = new FormData();
       for (let key in formData) {
         if (key === "imageUrls") continue; // skip imageUrls here
+        
         let val = formData[key];
+        
         if (numericFields.includes(key) && typeof val === "string") {
           val = val.replace(/,/g, "");
         }
-        multipartForm.append(key, val);
+        
+        // Special handling for landType array
+        if (key === "landType" && Array.isArray(val)) {
+          multipartForm.append(key, JSON.stringify(val));
+        } else {
+          multipartForm.append(key, val);
+        }
       }
 
       // If existing images

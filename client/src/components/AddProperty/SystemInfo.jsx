@@ -24,7 +24,7 @@ export default function SystemInfoCard({ formData, handleChange }) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Render the User Email Display */}
+        {/* Display the authenticated user information */}
         <UserSubmit />
 
         {/* Owner ID */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Card,
   CardHeader,
@@ -50,19 +50,40 @@ export default function Classification({ formData, handleChange }) {
   ];
 
   const [landTypeOpen, setLandTypeOpen] = React.useState(false);
-  const [selectedLandTypes, setSelectedLandTypes] = React.useState(formData.landTypes || []);
+  const [selectedLandTypes, setSelectedLandTypes] = React.useState(
+    formData.landType || []
+  );
 
+  // Initialize landType in formData if not already set
+  useEffect(() => {
+    if (!formData.landType) {
+      handleChange({
+        target: {
+          name: "landType",
+          value: []
+        }
+      });
+    }
+  }, []);
+
+  // Updated to properly update the parent formData
   const handleLandTypeChange = (value) => {
-    const updatedSelection = selectedLandTypes.includes(value)
-      ? selectedLandTypes.filter((type) => type !== value)
-      : [...selectedLandTypes, value];
-
+    let updatedSelection;
+    
+    if (selectedLandTypes.includes(value)) {
+      // Remove the value if already selected
+      updatedSelection = selectedLandTypes.filter((type) => type !== value);
+    } else {
+      // Add the value if not already selected
+      updatedSelection = [...selectedLandTypes, value];
+    }
+    
     setSelectedLandTypes(updatedSelection);
     
     // Update the parent form data
     handleChange({
       target: {
-        name: "landTypes",
+        name: "landType",
         value: updatedSelection
       }
     });

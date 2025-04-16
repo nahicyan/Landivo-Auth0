@@ -1,261 +1,308 @@
 import asyncHandler from "express-async-handler";
 import { prisma } from '../config/prismaConfig.js';
 
-  export const createResidency = asyncHandler(async (req, res) => {
-    const {
-      ownerId,
-      featured,
-      featuredWeight,
-      apnOrPin,
-      status,
-      title,
-      description,
-      direction,
-      type,
-      legalDescription,
-      zoning,
-      restrictions,
-      mobileHomeFriendly,
-      hoaPaymentTerms,
-      hoaPoa,
-      survey,
-      hoaFee,
-      notes,
-  
-      // Address and Location
-      streetAddress,
-      city,
-      county,
-      state,
-      zip,
-      latitude,
-      longitude,
-      area,
-      landIdLink,
-  
-      // Physical Attributes
-      sqft,
-      acre,
-      image,
-  
-      // Pricing and Financing
-      askingPrice,
-      minPrice,
-      disPrice,
+export const createResidency = asyncHandler(async (req, res) => {
+  const {
+    ownerId,
+    featured,
+    featuredWeight,
+    apnOrPin,
+    status,
+    title,
+    description,
+    direction,
+    type,
+    landType, // Now an array
+    legalDescription,
+    zoning,
+    restrictions,
+    mobileHomeFriendly,
+    hoaPaymentTerms,
+    hoaPoa,
+    survey,
+    hoaFee,
+    notes,
 
-      // Financing and Payment Calculation
-      financing,
-      tax,
-      hoaMonthly,
-      serviceFee,
-      term,
-      interestOne,
-      interestTwo,
-      interestThree,
-      monthlyPaymentOne,
-      monthlyPaymentTwo,
-      monthlyPaymentThree,
-      downPaymentOne,
-      downPaymentTwo,
-      downPaymentThree,
-      loanAmountOne,
-      loanAmountTwo,
-      loanAmountThree,
-      purchasePrice,
-      financedPrice,
+    // Address and Location
+    streetAddress,
+    city,
+    county,
+    state,
+    zip,
+    latitude,
+    longitude,
+    area,
+    landIdLink,
 
+    // Physical Attributes
+    sqft,
+    acre,
+    image,
 
-      // Utilities and Infrastructure
-      water,
-      sewer,
-      electric,
-      roadCondition,
-      floodplain,
-  
-      // Miscellaneous
-      ltag,
-      rtag,
-      landId,
-  
-      // User Information
-      userEmail,
-    } = req.body.data;
-  
-    try {
-      const lowerCaseEmail = userEmail.toLowerCase(); // Normalize email
-  
-      // Check if the user exists
-      const user = await prisma.user.findUnique({
-        where: { email: lowerCaseEmail },
-      });
-  
-      if (!user) {
-        return res.status(404).send({ message: "User not found." });
-      }
-  
-      // Check for existing property with unique constraints
-      const existingProperty = await prisma.residency.findFirst({
-        where: {
-          OR: [
-            { apnOrPin },
-            {
-              streetAddress,
-              city,
-              state,
-              userEmail: lowerCaseEmail,
-            },
-            {
-              latitude: parseFloat(latitude),
-              longitude: parseFloat(longitude),
-            },
-          ],
-        },
-      });
-  
-      if (existingProperty) {
-        return res.status(400).send({ message: "This property already exists in the system." });
-      }
-  
-      // Create the property with provided data
-      const residency = await prisma.residency.create({
-        data: {
-          ownerId,
-          featured: featured ?? "No",
-          featuredWeight: featuredWeight ? parseInt(featuredWeight, 10) : null,
-          apnOrPin,
-          status: status ?? "Available",
-          title,
-          description: description ?? null,
-          direction: direction ?? null,
-          type: type ?? null,
-          legalDescription: legalDescription ?? null,
-          zoning: zoning ?? null,
-          restrictions: restrictions ?? null,
-          mobileHomeFriendly: mobileHomeFriendly ?? null,
-          hoaPoa: hoaPoa ?? null,
-          hoaFee: hoaFee ?? null,
-          hoaPaymentTerms: hoaPaymentTerms ?? null,
-          notes: notes ?? null,
-          survey: survey ?? null,
-  
-          // Address and Location
-          streetAddress,
-          city,
-          county,
-          state,
-          zip,
-          latitude: latitude ? parseFloat(latitude) : null,
-          longitude: longitude ? parseFloat(longitude) : null,
-          area: area ?? null,
-          landIdLink: landIdLink ?? null,
-  
-          // Physical Attributes
-          sqft,
-          acre: acre ?? null,
-          image: image ?? null,
-  
-          // Pricing and Financing
-          askingPrice,
-          minPrice,
-          disPrice: disPrice ?? null,
+    // Pricing and Financing
+    askingPrice,
+    minPrice,
+    disPrice,
 
+    // Financing and Payment Calculation
+    financing,
+    tax,
+    hoaMonthly,
+    serviceFee,
+    term,
+    interestOne,
+    interestTwo,
+    interestThree,
+    monthlyPaymentOne,
+    monthlyPaymentTwo,
+    monthlyPaymentThree,
+    downPaymentOne,
+    downPaymentTwo,
+    downPaymentThree,
+    loanAmountOne,
+    loanAmountTwo,
+    loanAmountThree,
+    purchasePrice,
+    financedPrice,
 
-          // Financing and Payment Calculation
-          financing: financing ?? "Not-Available",
-          tax: tax ?? null,
-          hoaMonthly: hoaMonthly ?? null,
-          serviceFee: serviceFee ?? null,
-          term: term ? parseInt(term, 10) : null,
-          interestOne: interestOne ?? null,
-          interestTwo: interestTwo ?? null,
-          interestThree: interestThree ?? null,
-          monthlyPaymentOne: monthlyPaymentOne ?? null,
-          monthlyPaymentTwo: monthlyPaymentTwo ?? null,
-          monthlyPaymentThree: monthlyPaymentThree ?? null,
-          downPaymentOne: downPaymentOne ?? null,
-          downPaymentTwo: downPaymentTwo ?? null,
-          downPaymentThree: downPaymentThree ?? null,
-          loanAmountOne: loanAmountOne ?? null,
-          loanAmountTwo: loanAmountTwo ?? null,
-          loanAmountThree: loanAmountThree ?? null,
-          purchasePrice: purchasePrice ?? null,
-          financedPrice: financedPrice ?? null,
-        
-  
-          // Utilities and Infrastructure
-          water: water ?? null,
-          sewer: sewer ?? null,
-          electric: electric ?? null,
-          roadCondition: roadCondition ?? null,
-          floodplain: floodplain ?? null,
-  
-          // Miscellaneous
-          ltag: ltag ?? null,
-          rtag: rtag ?? null,
-          landId: landId ?? "Not-Available",
-  
-          // Relate to the user
-          owner: {
-            connect: { email: lowerCaseEmail },
+    // Utilities and Infrastructure
+    water,
+    sewer,
+    electric,
+    roadCondition,
+    floodplain,
+
+    // Miscellaneous
+    ltag,
+    rtag,
+    landId,
+  } = req.body.data;
+
+  try {
+    // Get the authenticated user's ID from the req object (set by middleware)
+    const createdById = req.userId;
+    
+    if (!createdById) {
+      return res.status(401).send({ message: "Unauthorized. User not authenticated." });
+    }
+
+    // Check for existing property with unique constraints
+    const existingProperty = await prisma.residency.findFirst({
+      where: {
+        OR: [
+          { apnOrPin },
+          {
+            streetAddress,
+            city,
+            state,
           },
-        },
-      });
-  
-      res.status(201).send({
-        message: "Property Added Successfully",
-        residency,
-      });
-  
-    } catch (err) {
-      console.error(err);
-      res.status(500).send({ message: "An error occurred", error: err.message });
-    }
-  });
-  
-//Get All Property
-export const getAllResidencies = asyncHandler(async (req, res) => {
-    try {
-      const residencies = await prisma.residency.findMany({
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-      res.status(200).send(residencies);
-    } catch (error) {
-      console.error("Error fetching residencies:", error);
-      res.status(500).send({ message: "An error occurred while fetching residencies", error: error.message });
-    }
-  });
-//Get A Certain Property
+          {
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+          },
+        ],
+      },
+    });
 
-export const getResidency= asyncHandler(async(req,res)=>{
-    const {id} = req.params;
-    try{
+    if (existingProperty) {
+      return res.status(400).send({ message: "This property already exists in the system." });
+    }
 
-        const residency = await prisma.residency.findUnique({
-            where: {id:id}
-        })
-        res.send(residency);
-    }
-    catch(err){
-        throw new Error(err.message);
-    }
+    // Prepare landType as an array if it's provided
+    const landTypeArray = landType ? (Array.isArray(landType) ? landType : [landType]) : [];
+
+    // Create the property with provided data
+    const residency = await prisma.residency.create({
+      data: {
+        // Connect to the creating user
+        createdBy: {
+          connect: { id: createdById }
+        },
+        updatedBy: {
+          connect: { id: createdById }
+        },
+        
+        ownerId: ownerId ? parseInt(ownerId, 10) : null,
+        featured: featured ?? "No",
+        featuredWeight: featuredWeight ? parseInt(featuredWeight, 10) : null,
+        apnOrPin,
+        status: status ?? "Available",
+        title,
+        description: description ?? "",
+        direction: direction ?? null,
+        type: type ?? null,
+        landType: landTypeArray,
+        legalDescription: legalDescription ?? null,
+        zoning: zoning ?? null,
+        restrictions: restrictions ?? null,
+        mobileHomeFriendly: mobileHomeFriendly ?? null,
+        hoaPoa: hoaPoa ?? null,
+        hoaFee: hoaFee ? parseFloat(hoaFee) : null,
+        hoaPaymentTerms: hoaPaymentTerms ?? null,
+        notes: notes ?? null,
+        survey: survey ?? null,
+
+        // Address and Location
+        streetAddress,
+        city,
+        county,
+        state,
+        zip,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
+        area: area ?? null,
+        landIdLink: landIdLink ?? null,
+
+        // Physical Attributes
+        sqft: parseInt(sqft, 10),
+        acre: acre ? parseFloat(acre) : null,
+        image: image ?? null,
+
+        // Pricing and Financing
+        askingPrice: parseFloat(askingPrice),
+        minPrice: parseFloat(minPrice),
+        disPrice: disPrice ? parseFloat(disPrice) : null,
+
+        // Financing and Payment Calculation
+        financing: financing ?? "Not-Available",
+        tax: tax ? parseFloat(tax) : null,
+        hoaMonthly: hoaMonthly ? parseFloat(hoaMonthly) : null,
+        serviceFee: serviceFee ? parseFloat(serviceFee) : null,
+        term: term ? parseInt(term, 10) : null,
+        interestOne: interestOne ? parseFloat(interestOne) : null,
+        interestTwo: interestTwo ? parseFloat(interestTwo) : null,
+        interestThree: interestThree ? parseFloat(interestThree) : null,
+        monthlyPaymentOne: monthlyPaymentOne ? parseFloat(monthlyPaymentOne) : null,
+        monthlyPaymentTwo: monthlyPaymentTwo ? parseFloat(monthlyPaymentTwo) : null,
+        monthlyPaymentThree: monthlyPaymentThree ? parseFloat(monthlyPaymentThree) : null,
+        downPaymentOne: downPaymentOne ? parseFloat(downPaymentOne) : null,
+        downPaymentTwo: downPaymentTwo ? parseFloat(downPaymentTwo) : null,
+        downPaymentThree: downPaymentThree ? parseFloat(downPaymentThree) : null,
+        loanAmountOne: loanAmountOne ? parseFloat(loanAmountOne) : null,
+        loanAmountTwo: loanAmountTwo ? parseFloat(loanAmountTwo) : null,
+        loanAmountThree: loanAmountThree ? parseFloat(loanAmountThree) : null,
+        purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
+        financedPrice: financedPrice ? parseFloat(financedPrice) : null,
+
+        // Utilities and Infrastructure
+        water: water ?? null,
+        sewer: sewer ?? null,
+        electric: electric ?? null,
+        roadCondition: roadCondition ?? null,
+        floodplain: floodplain ?? null,
+
+        // Miscellaneous
+        ltag: ltag ?? null,
+        rtag: rtag ?? null,
+        landId: landId ?? "Not-Available",
+        
+        // Initialize modification history as an empty array
+        modificationHistory: [],
+      },
+    });
+
+    res.status(201).send({
+      message: "Property Added Successfully",
+      residency,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "An error occurred", error: err.message });
+  }
 });
 
+// Get All Properties
+export const getAllResidencies = asyncHandler(async (req, res) => {
+  try {
+    const residencies = await prisma.residency.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        createdBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        updatedBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    });
+    res.status(200).send(residencies);
+  } catch (error) {
+    console.error("Error fetching residencies:", error);
+    res.status(500).send({ message: "An error occurred while fetching residencies", error: error.message });
+  }
+});
 
+// Get A Specific Property
+export const getResidency = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  try {
+    const residency = await prisma.residency.findUnique({
+      where: { id },
+      include: {
+        createdBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        updatedBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    });
+    res.send(residency);
+  } catch (err) {
+    console.error("Error fetching residency:", err);
+    res.status(500).send({ message: "An error occurred while fetching the residency", error: err.message });
+  }
+});
 
-
+// Update a Property
 export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let { currentUser, userEmail, imageUrls, viewCount, ...restOfData } = req.body;
+    let { imageUrls, viewCount, ...restOfData } = req.body;
 
-    // Remove non-updatable fields.
+    // Get the authenticated user's ID from the req object (set by middleware)
+    const updatedById = req.userId;
+    
+    if (!updatedById) {
+      return res.status(401).json({ message: "Unauthorized. User not authenticated." });
+    }
+
+    // Remove non-updatable fields
     delete restOfData.id;
     delete restOfData.createdAt;
     delete restOfData.updatedAt;
+    delete restOfData.createdById;
 
+    // Get the current property to track changes
+    const currentProperty = await prisma.residency.findUnique({
+      where: { id }
+    });
+    
+    if (!currentProperty) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    // Convert numeric fields
     if (restOfData.ownerId) restOfData.ownerId = parseInt(restOfData.ownerId, 10);
     if (restOfData.featuredWeight) restOfData.featuredWeight = parseInt(restOfData.featuredWeight, 10);
     if (restOfData.latitude) restOfData.latitude = parseFloat(restOfData.latitude);
@@ -266,6 +313,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
     if (restOfData.disPrice) restOfData.disPrice = parseFloat(restOfData.disPrice);
     if (restOfData.acre) restOfData.acre = parseFloat(restOfData.acre);
     if (restOfData.hoaFee) restOfData.hoaFee = parseFloat(restOfData.hoaFee);
+    
     // Payment Fields
     if (restOfData.tax) restOfData.tax = parseFloat(restOfData.tax);
     if (restOfData.hoaMonthly) restOfData.hoaMonthly = parseFloat(restOfData.hoaMonthly);
@@ -286,6 +334,10 @@ export const updateResidency = asyncHandler(async (req, res) => {
     if (restOfData.purchasePrice) restOfData.purchasePrice = parseFloat(restOfData.purchasePrice);
     if (restOfData.financedPrice) restOfData.financedPrice = parseFloat(restOfData.financedPrice);
 
+    // Handle landType as an array
+    if (restOfData.landType) {
+      restOfData.landType = Array.isArray(restOfData.landType) ? restOfData.landType : [restOfData.landType];
+    }
 
     // Process the "imageUrls" field (expected as JSON-stringified array)
     let finalExistingImages = [];
@@ -300,25 +352,49 @@ export const updateResidency = asyncHandler(async (req, res) => {
       }
     }
 
-    // Process newly uploaded images (if any) from multer.
+    // Process newly uploaded images (if any) from multer
     let newImagePaths = [];
     if (req.files && req.files.length > 0) {
       // Use relative path: "uploads/" + file.filename
       newImagePaths = req.files.map((file) => "uploads/" + file.filename);
     }
 
-    // Merge existing images with new image paths.
+    // Merge existing images with new image paths
     const finalImageUrls = [...finalExistingImages, ...newImagePaths];
 
-    // Prepare update data.
-    let updateData = {
-      ...restOfData,
-      imageUrls: finalImageUrls, // Save as a JSON array in the DB.
+    // Create a modification record
+    const modification = {
+      timestamp: new Date(),
+      userId: updatedById,
+      action: 'update',
+      changes: {}
     };
 
-    if (userEmail) {
-      updateData.owner = { connect: { email: userEmail } };
+    // Track changes for each field
+    for (const key in restOfData) {
+      if (JSON.stringify(currentProperty[key]) !== JSON.stringify(restOfData[key])) {
+        modification.changes[key] = {
+          from: currentProperty[key],
+          to: restOfData[key]
+        };
+      }
     }
+
+    // Get existing modification history
+    const modificationHistory = currentProperty.modificationHistory || [];
+    
+    // Only add to history if there are changes
+    if (Object.keys(modification.changes).length > 0) {
+      modificationHistory.push(modification);
+    }
+
+    // Prepare update data
+    const updateData = {
+      ...restOfData,
+      imageUrls: finalImageUrls,
+      updatedBy: { connect: { id: updatedById } },
+      modificationHistory
+    };
 
     const updatedResidency = await prisma.residency.update({
       where: { id },
@@ -355,31 +431,43 @@ export const updateResidency = asyncHandler(async (req, res) => {
   }
 });
 
-
+// Get Property Images
 export const getResidencyImages = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const residency = await prisma.residency.findUnique({
-    where: { id },
-  });
+  try {
+    const residency = await prisma.residency.findUnique({
+      where: { id },
+    });
 
-  if (!residency || !residency.image) {
-    return res.status(404).json({ message: "No images found for this residency" });
+    if (!residency || !residency.imageUrls) {
+      return res.status(404).json({ message: "No images found for this residency" });
+    }
+
+    res.status(200).json({
+      message: "Images retrieved successfully",
+      images: residency.imageUrls,
+    });
+  } catch (error) {
+    console.error("Error fetching residency images:", error);
+    res.status(500).json({
+      message: "Failed to retrieve images",
+      error: error.message,
+    });
   }
-
-  // Parse image array from JSON string
-  const imagePaths = JSON.parse(residency.image);
-
-  res.status(200).json({
-    message: "Images retrieved successfully",
-    images: imagePaths,
-  });
 });
 
-
+// Create Property with Multiple Files
 export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) => {
   console.log("This is creation request body: ", req.body);
   try {
+    // Get the authenticated user's ID from the req object (set by middleware)
+    const createdById = req.userId;
+    
+    if (!createdById) {
+      return res.status(401).json({ message: "Unauthorized. User not authenticated." });
+    }
+
     // Collect all uploaded file paths
     let imagePaths = [];
     if (req.files && req.files.length > 0) {
@@ -402,22 +490,20 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
     // Destructure the fields from req.body
     const {
       //System Info
-
       ownerId,
-      userEmail,
       area,
       status,
       featured,
       featuredWeight,
 
-     // Listing Details
-
+      // Listing Details
       title,
       description,
       notes,
 
-    // Classification
+      // Classification
       type,
+      landType, // Now an array field
       legalDescription,
       zoning,
       restrictions,
@@ -428,7 +514,6 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       survey,
 
       // Location
-
       streetAddress,
       city,
       county,
@@ -441,68 +526,83 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       landIdLink,
       landId,
 
-    // Dimensions
-
+      // Dimensions
       sqft,
       acre,
 
-    // Pricing
+      // Pricing
+      askingPrice,
+      minPrice,
+      disPrice,
 
-    askingPrice,
-    minPrice,
-    disPrice,
+      // Financing and Payment Calculation 
+      financing,
+      tax,
+      hoaMonthly,
+      serviceFee,
+      term,
+      interestOne,
+      interestTwo,
+      interestThree,
+      monthlyPaymentOne,
+      monthlyPaymentTwo,
+      monthlyPaymentThree,
+      downPaymentOne,
+      downPaymentTwo,
+      downPaymentThree,
+      loanAmountOne,
+      loanAmountTwo,
+      loanAmountThree,
+      purchasePrice,
+      financedPrice,
 
-    // Financing and Payment Calculation 
-    financing,
-    tax,
-    hoaMonthly,
-    serviceFee,
-    term,
-    interestOne,
-    interestTwo,
-    interestThree,
-    monthlyPaymentOne,
-    monthlyPaymentTwo,
-    monthlyPaymentThree,
-    downPaymentOne,
-    downPaymentTwo,
-    downPaymentThree,
-    loanAmountOne,
-    loanAmountTwo,
-    loanAmountThree,
-    purchasePrice,
-    financedPrice,
-
-    // Utilities
+      // Utilities
       water,
       sewer,
       electric,
       roadCondition,
       floodplain,
 
-
-    //Media & Tags  
+      //Media & Tags  
       ltag,
       rtag,
-
-
     } = req.body;
 
-    const lowerCaseEmail = userEmail.toLowerCase();
-
-    // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { email: lowerCaseEmail },
-    });
-    if (!user) {
-      return res.status(404).json({ message: "User not found." });
+    // Prepare landType as an array if it's provided
+    let landTypeArray = [];
+    if (landType) {
+      try {
+        // Handle different input formats: string, array, or JSON string
+        if (typeof landType === 'string') {
+          // Try to parse as JSON if it looks like an array
+          if (landType.startsWith('[') && landType.endsWith(']')) {
+            landTypeArray = JSON.parse(landType);
+          } else {
+            // Single string value
+            landTypeArray = [landType];
+          }
+        } else if (Array.isArray(landType)) {
+          landTypeArray = landType;
+        }
+      } catch (error) {
+        console.error("Error processing landType:", error);
+        landTypeArray = typeof landType === 'string' ? [landType] : [];
+      }
     }
 
     // Create the residency with the array of image URLs stored in "imageUrls"
     const residency = await prisma.residency.create({
       data: {
+        // Connect to the creating user
+        createdBy: {
+          connect: { id: createdById }
+        },
+        updatedBy: {
+          connect: { id: createdById }
+        },
+        
         // System Info
-        ownerId: parseInt(ownerId),
+        ownerId: ownerId ? parseInt(ownerId) : null,
         area,
         status,
         featured: featured ?? "No",
@@ -515,6 +615,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
     
         // Classification
         type: type ?? null,
+        landType: landTypeArray,
         legalDescription: legalDescription ?? null,
         zoning: zoning ?? null,
         restrictions: restrictions ?? null,
@@ -578,15 +679,12 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         ltag: ltag ?? null,
         rtag: rtag ?? null,
         imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
-    
-        // Connect Owner
-        owner: {
-          connect: { email: lowerCaseEmail },
-        },
+        
+        // Initialize modification history as an empty array
+        modificationHistory: [],
       },
     });
     
-
     res.status(201).json({
       message: "Property added successfully",
       residency,
@@ -598,10 +696,13 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       error: err.message,
     });
   }
-
 });
 
-
-
-
-  
+// export {
+//   createResidency,
+//   getAllResidencies,
+//   getResidency,
+//   updateResidency,
+//   getResidencyImages,
+//   createResidencyWithMultipleFiles
+// };
