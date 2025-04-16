@@ -147,7 +147,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     
     const { firstName, lastName } = req.body;
     
-    // Get the existing user to track modifications
+    // Get the existing user to check if it exists
     const existingUser = await prisma.user.findUnique({
       where: { auth0Id }
     });
@@ -156,39 +156,12 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Create modification record
-    const modification = {
-      timestamp: new Date(),
-      userId: existingUser.id,
-      action: 'update',
-      changes: {}
-    };
-    
-    // Track changes
-    if (existingUser.firstName !== firstName) {
-      modification.changes.firstName = {
-        from: existingUser.firstName,
-        to: firstName
-      };
-    }
-    
-    if (existingUser.lastName !== lastName) {
-      modification.changes.lastName = {
-        from: existingUser.lastName,
-        to: lastName
-      };
-    }
-    
-    // Create or update modification history
-    const existingHistory = existingUser.modificationHistory || [];
-    const modificationHistory = [...existingHistory, modification];
-    
+    // Remove modificationHistory tracking since it's not in the schema
     const updatedUser = await prisma.user.update({
       where: { auth0Id },
       data: { 
         firstName, 
-        lastName,
-        modificationHistory
+        lastName
       }
     });
     

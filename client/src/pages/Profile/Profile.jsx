@@ -282,7 +282,7 @@ const Profile = () => {
                   <div className="flex space-x-2 pt-2">
                     <Button 
                       type="submit" 
-                      className="bg-primary hover:bg-primary-700"
+                      className="bg-[#000] hover:[#030001]"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? "Saving..." : "Save Profile"}
