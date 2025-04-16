@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ProfileDetails = ({ 
   user, 
@@ -16,8 +17,20 @@ const ProfileDetails = ({
   handleSubmit,
   isSubmitting,
   updateSuccess,
-  profileError
+  profileError,
+  isLoading
 }) => {
+  // Show loading skeleton while fetching user data
+  if (isLoading) {
+    return (
+      <div className="space-y-5">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {isEditing ? (
