@@ -135,8 +135,10 @@ export function useAuth() {
             // User with roles/permissions doesn't exist in database, create them
             // Extract name components if available
             const names = user.name ? user.name.split(' ') : [];
-            const firstName = user.given_name || (names.length > 0 ? names[0] : '');
-            const lastName = user.family_name || (names.length > 1 ? names.slice(1).join(' ') : '');
+            // Check if name looks like an email
+            const nameIsEmail = user.name && user.name.includes('@');
+            const firstName = nameIsEmail ? '' : (user.given_name || (names.length > 0 ? names[0] : ''));
+            const lastName = nameIsEmail ? '' : (user.family_name || (names.length > 1 ? names.slice(1).join(' ') : ''));
             
             // Create user in database
             try {

@@ -87,7 +87,12 @@ export const extractUserFromToken = async (req, res, next) => {
           auth0User.needsProfileCompletion = !dbUser.firstName || !dbUser.lastName;
         } else {
           // User doesn't exist but has permissions/roles, so create one
-          const names = auth0User.name ? auth0User.name.split(' ') : [];
+          
+          // Check if name looks like an email - don't use email as name
+          const nameIsEmail = auth0User.name && auth0User.name.includes('@');
+          const validName = nameIsEmail ? '' : auth0User.name;
+          
+          const names = validName ? validName.split(' ') : [];
           const firstName = names.length > 0 ? names[0] : null;
           const lastName = names.length > 1 ? names.slice(1).join(' ') : null;
           
