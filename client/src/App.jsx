@@ -57,6 +57,8 @@ import { PERMISSIONS } from "./utils/permissions";
 import { ActivityTrackingProvider } from "./components/ActivityTracking/ActivityTrackingProvider";
 // Import our API interceptor hook
 import { useApiAuthInterceptor } from "./utils/apiInterceptor";
+// Import AdminProperties page
+import AdminProperties from "./pages/AdminProperties/AdminProperties";
 
 import "react-toastify/dist/ReactToastify.css";
 
@@ -101,15 +103,8 @@ function App() {
                             {/* Use PropertyWithTracking instead of the original Property */}
                             <Route path=":propertyId" element={<PropertyWithTracking />} />
                             <Route path=":propertyId/offers" element={<OfferTable />} />
-                            {/* Protected route - only accessible to authenticated users */}
-                            <Route
-                              path=":propertyId/qualify"
-                              element={
-                                <ProtectedRoute>
-                                  <Qualify />
-                                </ProtectedRoute>
-                              }
-                            />
+                            {/* Qualification route - security disabled */}
+                            <Route path=":propertyId/qualify" element={<Qualify />} />
                           </Route>
                           <Route path="/sell" element={<Sell />} />
                           <Route path="/financing" element={<Financing />} />
@@ -133,14 +128,8 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
-                          <Route
-                            path="/qualify"
-                            element={
-                              <ProtectedRoute>
-                                <Qualify />
-                              </ProtectedRoute>
-                            }
-                          />
+                          {/* Qualification route - security disabled */}
+                          <Route path="/qualify" element={<Qualify />} />
                           <Route
                             path="/CreateUservbtwP44jbX0FKKYUdHBGGCcYqenvNlYdH1Sj7K1dSD3kRo1Pib5VXQWb59a7CkQZ4DiQuu5r1t9I0uXVUbYjvvj4E1djRIkXRh40Uvbz2jSz6PZKguOjGhi7avF1b"
                             element={<CreateUser />}
@@ -161,13 +150,29 @@ function App() {
                           }
                         >
                           <Route index element={<Admin />} />
+                          
+                          {/* New Properties Management Route */}
+                          {/* <Route
+                            path="properties"
+                            element={
+                              <ProtectedRoute
+                                requiredPermissions={[PERMISSIONS.READ_PROPERTIES]}
+                                fallbackToRoles={true}
+                                allowedRoles={['Admin']}
+                              >
+                                <AdminProperties />
+                              </ProtectedRoute>
+                            }
+                          /> */}
+                          <Route path="properties" element={<AdminProperties />} />
+                          
                           {/* Testing Deals */}
-                          <Route path="/admin/deals" element={<AdminDeals />} />
-                          <Route path="/admin/deals/list" element={<DealsList />} />
-                          <Route path="/admin/deals/create" element={<CreateDealForm />} />
-                          <Route path="/admin/deals/:id" element={<DealDetail />} />
-                          <Route path="/admin/deals/:id/payments" element={<PaymentList />} />
-                          <Route path="/admin/deals/:id/summary" element={<DealFinancialSummary />} />
+                          <Route path="deals" element={<AdminDeals />} />
+                          <Route path="deals/list" element={<DealsList />} />
+                          <Route path="deals/create" element={<CreateDealForm />} />
+                          <Route path="deals/:id" element={<DealDetail />} />
+                          <Route path="deals/:id/payments" element={<PaymentList />} />
+                          <Route path="deals/:id/summary" element={<DealFinancialSummary />} />
                           <Route
                             path="users"
                             element={
@@ -264,30 +269,11 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
-                          <Route
-                            path="qualifications"
-                            element={
-                              <ProtectedRoute
-                                requiredPermissions={[PERMISSIONS.READ_QUALIFICATIONS]}
-                                fallbackToRoles={true}
-                                allowedRoles={['Admin']}
-                              >
-                                <QualificationsDashboard />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="financing/applications"
-                            element={
-                              <ProtectedRoute
-                                requiredPermissions={[PERMISSIONS.READ_OFFERS]}
-                                fallbackToRoles={true}
-                                allowedRoles={['Admin']}
-                              >
-                                <OfferTable />
-                              </ProtectedRoute>
-                            }
-                          />
+                          {/* Qualification dashboard - security disabled */}
+                          <Route path="qualifications" element={<QualificationsDashboard />} />
+                          
+                          {/* Financing applications - security disabled */}
+                          <Route path="financing/applications" element={<OfferTable />} />
                         </Route>
 
                         {/* Agent routes - using permissions instead of roles */}

@@ -269,10 +269,10 @@ const VipBuyerSection = () => {
           <div className="flex space-x-2 pt-2">
             <Button 
               type="submit" 
-              className="bg-accent hover:bg-accent-700 text-white"
+              className="bg-[#000] hover:[#030001] text-white"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save VIP Profile"}
+              {isSubmitting ? "Saving..." : "Save Profile"}
             </Button>
             
             <Button

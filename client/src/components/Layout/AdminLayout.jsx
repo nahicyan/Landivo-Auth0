@@ -43,7 +43,7 @@ export default function AdminLayout() {
   // Admin navigation items
   const menuItems = [
     { text: "Dashboard", icon: <HomeIcon />, path: "/admin" },
-    { text: "Properties", icon: <BusinessIcon />, path: "/properties" },
+    { text: "Properties", icon: <BusinessIcon />, path: "/admin/properties" },
     { text: "Add Property", icon: <AddIcon />, path: "/agent/add-property" },
     { text: "Users", icon: <PeopleIcon />, path: "/admin/users" },
     { text: "Financing Deals", icon: <AttachMoneyIcon />, path: "/admin/deals" },

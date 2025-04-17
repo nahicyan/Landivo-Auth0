@@ -13,7 +13,7 @@ import DealsWidget from "./widgets/DealsWidget";
 import StatCards from "./widgets/StatCards";
 import FinanceWidget from "./widgets/FinanceWidget";
 import ActivityWidget from "./widgets/ActivityWidget";
-import OffersWidget from "./widgets/OffersWidget";
+// import OffersWidget from "./widgets/OffersWidget";
 import PropertiesWidget from "./widgets/PropertiesWidget";
 import BuyersWidget from "./widgets/BuyersWidget";
 import BuyerListsWidget from "./widgets/BuyerListsWidget";
@@ -76,7 +76,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <DealsWidget isLoading={isLoading} />
             <ActivityWidget isLoading={isLoading} />
-            <OffersWidget isLoading={isLoading} />
+            {/* <OffersWidget isLoading={isLoading} /> */}
             <PropertiesWidget isLoading={isLoading} />
           </div>
         </TabsContent>
