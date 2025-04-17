@@ -3,7 +3,7 @@ import FinancingHero from "./Hero"
 import Choose from "./Choose"
 import Content from "./Content"
 import FinancingSlider from "./FinanceSlider"
-import Action from "./action"
+import Action from "./Action"
 import MainContent from "./MainContent"
 
 export default function Financing() {
