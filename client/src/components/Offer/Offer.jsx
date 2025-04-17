@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../utils/api";
 import { parsePhoneNumber } from "libphonenumber-js";
 import ContactCard from "@/components/ContactCard/ContactCard";
-
+// Add Auth0 and VIP buyer imports
+import { useAuth0 } from "@auth0/auth0-react";
+import { useVipBuyer } from "@/utils/VipBuyerContext";
 
 // ShadCN UI components
 import {
@@ -56,6 +58,88 @@ export default function Offer({ propertyData }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
+
+  // Get Auth0 user data and VIP buyer data
+  const { isAuthenticated, user } = useAuth0();
+  const { isVipBuyer, vipBuyerData } = useVipBuyer();
+  
+  // Auto-fill form data when component mounts
+  useEffect(() => {
+    // Only auto-fill if the user is authenticated
+    if (isAuthenticated) {
+      // Check local storage first
+      const savedFormData = localStorage.getItem('offerFormData');
+      let storedData = null;
+      
+      if (savedFormData) {
+        try {
+          storedData = JSON.parse(savedFormData);
+          
+          // Use local storage data if it exists and has values
+          if (storedData) {
+            setFirstName(storedData.firstName || '');
+            setLastName(storedData.lastName || '');
+            setEmail(storedData.email || '');
+            setPhone(storedData.phone || '');
+            setBuyerType(storedData.buyerType || '');
+            
+            console.log('Form data loaded from local storage');
+            return; // Don't continue if we found local storage data
+          }
+        } catch (error) {
+          console.error('Error parsing saved form data:', error);
+        }
+      }
+      
+      // If no local storage or failed to parse, check if user is a VIP buyer
+      if (isVipBuyer && vipBuyerData) {
+        setFirstName(vipBuyerData.firstName || '');
+        setLastName(vipBuyerData.lastName || '');
+        setEmail(vipBuyerData.email || '');
+        setPhone(vipBuyerData.phone || '');
+        setBuyerType(vipBuyerData.buyerType || '');
+        console.log('Form data loaded from VIP buyer profile');
+        return;
+      }
+      
+      // If not a VIP buyer, use Auth0 data
+      if (user) {
+        // Extract first and last name from Auth0 user object
+        if (user.given_name) setFirstName(user.given_name);
+        if (user.family_name) setLastName(user.family_name);
+        // If no given/family name, try to parse from name
+        else if (user.name && !user.name.includes('@')) {
+          const nameParts = user.name.split(' ');
+          if (nameParts.length > 0) setFirstName(nameParts[0]);
+          if (nameParts.length > 1) setLastName(nameParts.slice(1).join(' '));
+        } else if (user.nickname && !user.nickname.includes('@')) {
+          setFirstName(user.nickname);
+        }
+        
+        // Use email from Auth0
+        if (user.email) setEmail(user.email);
+        
+        console.log('Form data loaded from Auth0 user data');
+      }
+    }
+  }, [isAuthenticated, user, isVipBuyer, vipBuyerData]);
+
+  // Save form data to local storage whenever it changes
+  useEffect(() => {
+    // Only save if at least one field has been filled out
+    if (firstName || lastName || email || phone || buyerType) {
+      const formData = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        buyerType,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      localStorage.setItem('offerFormData', JSON.stringify(formData));
+    }
+  }, [firstName, lastName, email, phone, buyerType]);
 
   // Format the offer price as the user types
   const handleOfferPriceChange = (e) => {
@@ -164,6 +248,9 @@ export default function Offer({ propertyData }) {
       setDialogMessage("Offer submitted successfully!");
       setDialogType("success");
       setDialogOpen(true);
+      
+      // After successful submission, clear the stored form data
+      localStorage.removeItem('offerFormData');
     } catch (error) {
       setDialogMessage(
         "You've already offered this or a higher amount. Please adjust your offer to continue!"
@@ -295,8 +382,8 @@ export default function Offer({ propertyData }) {
             </Button>
           </form>
           <div className="py-6">
-      <ContactCard />
-    </div>
+            <ContactCard />
+          </div>
         </CardContent>
       </Card>
 

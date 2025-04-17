@@ -83,7 +83,7 @@ model Residency {
   deals     Deal[]
 
   // Property Details
-  marketingOwnerId    Int?    // This is the marketing ID, not changing as requested
+  // marketingOwnerId    Int?     This is the marketing ID, not changing as requested
   title              String
   featured           String?
   featuredWeight     Int?
@@ -253,7 +253,7 @@ model Qualification {
   id             String  @id @default(auto()) @map("_id") @db.ObjectId
   propertyId     String? // ID of the property being qualified for
   propertyPrice  Float // Asking or financed price
-  ownerId        String?
+  ownerId        Int?
   loanAmount     Float? // Selected loan amount
   interestRate   Float? // Selected interest rate
   monthlyPayment Float? // Calculated monthly payment

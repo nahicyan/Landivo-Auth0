@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { parsePhoneNumber } from "libphonenumber-js";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/components/hooks/useAuth";
+import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { 
   Card, 
   CardContent 
@@ -17,6 +20,14 @@ import {
 } from "@/components/ui/dialog";
 
 export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBack }) {
+  // Get user data from different sources
+  const { user: auth0User } = useAuth0();
+  const { userRoles, userPermissions } = useAuth();
+  const { isVipBuyer, vipBuyerData } = useVipBuyer();
+  
+  // Check if user is a non-system user (no roles or permissions)
+  const isNonSystemUser = auth0User && userRoles.length === 0 && userPermissions.length === 0;
+  
   // Initialize local form state from parent surveyData
   const [formData, setFormData] = useState({
     firstName: surveyData.firstName || "",
@@ -29,6 +40,68 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("warning");
+
+  // Auto-fill data for non-system users
+  useEffect(() => {
+    if (isNonSystemUser) {
+      // Data priority: 1. Local Storage, 2. VIP Buyer Data, 3. Auth0
+      
+      // Try to get data from localStorage first
+      const savedData = localStorage.getItem('vipSignupData');
+      let dataFromLocalStorage = null;
+      
+      if (savedData) {
+        try {
+          dataFromLocalStorage = JSON.parse(savedData);
+        } catch (e) {
+          console.error("Error parsing saved form data:", e);
+        }
+      }
+      
+      // Initialize with data from appropriate source based on priority
+      const newFormData = {
+        firstName: 
+          // Priority 1: Local Storage
+          (dataFromLocalStorage?.firstName) || 
+          // Priority 2: VIP Buyer Data
+          (isVipBuyer && vipBuyerData?.firstName) || 
+          // Priority 3: Auth0 Data
+          auth0User?.given_name || 
+          (auth0User?.name && !auth0User.name.includes('@') ? auth0User.name.split(' ')[0] : "") || 
+          formData.firstName,
+          
+        lastName: 
+          (dataFromLocalStorage?.lastName) || 
+          (isVipBuyer && vipBuyerData?.lastName) || 
+          auth0User?.family_name || 
+          (auth0User?.name && !auth0User.name.includes('@') && auth0User.name.split(' ').length > 1 
+            ? auth0User.name.split(' ').slice(1).join(' ') 
+            : "") || 
+          formData.lastName,
+          
+        email: 
+          (dataFromLocalStorage?.email) || 
+          (isVipBuyer && vipBuyerData?.email) || 
+          auth0User?.email || 
+          formData.email,
+          
+        phone: 
+          (dataFromLocalStorage?.phone) || 
+          (isVipBuyer && vipBuyerData?.phone) || 
+          formData.phone
+      };
+      
+      // Update local state
+      setFormData(newFormData);
+      
+      // Update parent state
+      Object.keys(newFormData).forEach(key => {
+        if (newFormData[key]) {
+          updateSurveyData(key, newFormData[key]);
+        }
+      });
+    }
+  }, [isNonSystemUser, auth0User, isVipBuyer, vipBuyerData, updateSurveyData]);
 
   // Update local state if surveyData changes
   useEffect(() => {

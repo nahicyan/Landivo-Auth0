@@ -14,6 +14,8 @@ import VipBuyerSection from './VipBuyerSection';
 import UserRolesSection from './UserRolesSection';
 import PermissionsDisplay from './PermissionsDisplay';
 import ProfileSkeleton from './ProfileSkeleton';
+import BuyerOffersTable from './BuyerOffersTable';
+import BuyerQualificationsTable from './BuyerQualificationsTable';
 
 const Profile = () => {
   const { user, isLoading, isAuthenticated } = useAuth0();
@@ -192,6 +194,19 @@ const Profile = () => {
             <PermissionsDisplay
               userPermissions={userPermissions}
             />
+          )}
+          
+          {/* VIP Buyer Activity Tables - show only for VIP buyers */}
+          {isVipBuyer && (
+            <div className="mt-8 space-y-6">
+              <h2 className="text-xl font-semibold">My Activity</h2>
+              
+              {/* Offers Table */}
+              <BuyerOffersTable />
+              
+              {/* Qualifications Table */}
+              <BuyerQualificationsTable />
+            </div>
           )}
         </div>
       </Card>
