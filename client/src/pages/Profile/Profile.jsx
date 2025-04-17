@@ -20,7 +20,7 @@ const Profile = () => {
   const { userRoles, userPermissions } = useAuth();
   const { getUserProfile, updateUserProfile } = useUserProfileApi();
   const { isVipBuyer } = useVipBuyer();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     firstName: '',
@@ -62,7 +62,7 @@ const Profile = () => {
         }
       }
     };
-    
+
     loadUserProfile();
   }, [isAuthenticated, user, getUserProfile, isSystemUser]);
 
@@ -72,12 +72,12 @@ const Profile = () => {
     setIsSubmitting(true);
     setUpdateSuccess(false);
     setProfileError(null);
-    
+
     try {
       await updateUserProfile(profileData);
       setUpdateSuccess(true);
       setIsEditing(false);
-      
+
       // Update local data
       setDbUserData({
         ...dbUserData,
@@ -119,7 +119,7 @@ const Profile = () => {
             {profileError}
           </AlertDescription>
           <div className="mt-4">
-            <Button 
+            <Button
               onClick={() => window.location.reload()}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
@@ -134,17 +134,18 @@ const Profile = () => {
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
       <Card className="w-full shadow-lg overflow-hidden bg-background">
-        <ProfileHeader 
-          user={user} 
+        <ProfileHeader
+          user={user}
+          dbUserData={dbUserData}
         />
-        
+
         {/* Profile Main Content */}
         <div className="px-6 py-6">
           <div className="grid md:grid-cols-2 gap-6">
             {/* Left Column */}
             {/* Only show ProfileDetails for system users or show a simplified version for VIP buyers */}
             {isSystemUser ? (
-              <ProfileDetails 
+              <ProfileDetails
                 user={user}
                 dbUserData={dbUserData}
                 profileData={profileData}
@@ -177,7 +178,7 @@ const Profile = () => {
             )}
 
             {/* Right Column */}
-            <UserRolesSection 
+            <UserRolesSection
               user={user}
               userRoles={userRoles}
             />
@@ -188,7 +189,7 @@ const Profile = () => {
 
           {/* Permissions Section - only for system users */}
           {isSystemUser && (
-            <PermissionsDisplay 
+            <PermissionsDisplay
               userPermissions={userPermissions}
             />
           )}
