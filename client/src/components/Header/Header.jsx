@@ -1,5 +1,5 @@
 // client/src/components/Header/Header.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,10 +20,13 @@ import { useAuth } from '@/components/hooks/useAuth';
 import { usePermissions } from '@/components/Auth0/PermissionsContext';
 import PermissionGuard from '@/components/Auth0/PermissionGuard';
 import { PERMISSIONS } from '@/utils/permissions';
+import { useVipBuyer } from '@/utils/VipBuyerContext';
+import { useUserProfileApi } from '@/utils/api';
 
 const Header = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dbUser, setDbUser] = useState(null);
   
   // Use the enhanced Auth hook and permissions
   const { 
@@ -34,7 +37,30 @@ const Header = () => {
     logout 
   } = useAuth();
   
+  // Also access VIP buyer data
+  const { isVipBuyer, vipBuyerData } = useVipBuyer();
+  
+  // Use the same hook that the Profile page uses
+  const { getUserProfile } = useUserProfileApi();
+  
   const { check } = usePermissions();
+
+  // Load database user profile data using the proper authenticated method
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (isAuthenticated && !isLoading) {
+        try {
+          const profile = await getUserProfile();
+          console.log('Loaded user profile in Header:', profile);
+          setDbUser(profile);
+        } catch (error) {
+          console.error('Error loading user profile in Header:', error);
+        }
+      }
+    };
+    
+    loadUserProfile();
+  }, [isAuthenticated, isLoading, getUserProfile]);
 
   const handleLogin = () => {
     loginWithRedirect();
@@ -46,6 +72,41 @@ const Header = () => {
         returnTo: window.location.origin 
       }
     });
+  };
+  
+  // Get display name with priority to database information
+  const getDisplayName = () => {
+    // First priority: Complete name from database user profile
+    if (dbUser?.firstName && dbUser?.lastName) {
+      return `${dbUser.firstName} ${dbUser.lastName}`;
+    }
+    
+    // Second priority: Complete name from VIP buyer data
+    if (isVipBuyer && vipBuyerData?.firstName && vipBuyerData?.lastName) {
+      return `${vipBuyerData.firstName} ${vipBuyerData.lastName}`;
+    }
+    
+    // Third priority: Partial name from database
+    if (dbUser?.firstName) {
+      return dbUser.firstName;
+    }
+    
+    if (isVipBuyer && vipBuyerData?.firstName) {
+      return vipBuyerData.firstName;
+    }
+    
+    // Fourth priority: Auth0 given_name and family_name
+    if (user?.given_name && user?.family_name) {
+      return `${user.given_name} ${user.family_name}`;
+    }
+    
+    // Fifth priority: Auth0 name if not an email
+    if (user?.name && !user.name.includes('@')) {
+      return user.name;
+    }
+    
+    // Final fallback: email or generic "User"
+    return user?.email || 'User';
   };
 
   return (
@@ -192,14 +253,14 @@ const Header = () => {
                     {user?.picture ? (
                       <img 
                         src={user.picture} 
-                        alt={user.name || "Profile"} 
+                        alt={getDisplayName()} 
                         className="w-8 h-8 rounded-full mr-2"
                       />
                     ) : (
                       <User className="w-5 h-5 mr-2" />
                     )}
                     <span className="max-w-[150px] truncate">
-                      {user?.name || user?.nickname || user?.email}
+                      {getDisplayName()}
                     </span>
                     <svg
                       className="w-5 h-5 ml-2 -mr-1"

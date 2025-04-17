@@ -1,32 +1,78 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/components/hooks/useAuth";
+import { useUserProfileApi } from '@/utils/api';
+import { useVipBuyer } from '@/utils/VipBuyerContext';
 
 export default function UserSubmit() {
+  // State for the database user
+  const [dbUser, setDbUser] = useState(null);
+  
   // Use the same authentication hook that Header and Profile use
   const { user, isLoading } = useAuth();
+  
+  // Use the API hook to get the authenticated getUserProfile function
+  const { getUserProfile } = useUserProfileApi();
+  
+  // Also access VIP buyer data in case user is a VIP buyer
+  const { isVipBuyer, vipBuyerData } = useVipBuyer();
 
-  // Get user display name 
+  // Load database user profile data using the authenticated method
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (user?.sub && !isLoading) {
+        try {
+          const profile = await getUserProfile();
+          setDbUser(profile);
+        } catch (error) {
+          console.error('Error loading user profile in UserSubmit:', error);
+        }
+      }
+    };
+    
+    loadUserProfile();
+  }, [user, isLoading, getUserProfile]);
+
+  // Get user display name with proper prioritization
   const getUserDisplayName = () => {
     if (!user) return "Not logged in";
     
-    // Check for firstName and lastName from user profile
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`;
+    // First priority: Complete name from database user profile
+    if (dbUser?.firstName && dbUser?.lastName) {
+      return `${dbUser.firstName} ${dbUser.lastName}`;
     }
     
-    // Check for name (from Auth0)
-    if (user.name) {
+    // Second priority: Complete name from VIP buyer data
+    if (isVipBuyer && vipBuyerData?.firstName && vipBuyerData?.lastName) {
+      return `${vipBuyerData.firstName} ${vipBuyerData.lastName}`;
+    }
+    
+    // Third priority: Partial name from database
+    if (dbUser?.firstName) {
+      return dbUser.firstName;
+    }
+    
+    if (isVipBuyer && vipBuyerData?.firstName) {
+      return vipBuyerData.firstName;
+    }
+    
+    // Fourth priority: Auth0 given_name and family_name
+    if (user.given_name && user.family_name) {
+      return `${user.given_name} ${user.family_name}`;
+    }
+    
+    // Fifth priority: Auth0 name if not an email
+    if (user.name && !user.name.includes('@')) {
       return user.name;
     }
     
-    // Check for nickname
-    if (user.nickname) {
+    // Sixth priority: nickname
+    if (user.nickname && !user.nickname.includes('@')) {
       return user.nickname;
     }
     
-    // Fallback to email
+    // Final fallback: email
     return user.email;
   };
 
