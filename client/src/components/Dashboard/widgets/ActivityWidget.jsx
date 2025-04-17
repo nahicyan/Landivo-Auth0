@@ -1,4 +1,4 @@
-// client/src/components/ActivityWidget/ActivityWidget.jsx
+// client/src/components/Dashboard/widgets/ActivityWidget.jsx
 import React, { useState, useEffect } from "react";
 import { format, formatDistance } from "date-fns";
 import ActivityDataProvider from "@/services/ActivityDataProvider";
@@ -24,7 +24,8 @@ import {
   Filter,
   ChevronRight,
   Loader2,
-  User
+  User,
+  AlertCircle
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,6 +43,14 @@ const ActivityWidget = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [activityCounts, setActivityCounts] = useState({
+    property_view: 0,
+    search: 0,
+    offer: 0,
+    page_visit: 0,
+    click: 0,
+    total: 0
+  });
 
   // Fetch buyers and activity data
   useEffect(() => {
@@ -66,6 +75,14 @@ const ActivityWidget = () => {
         const vipBuyersToFetch = vipBuyers.slice(0, 5);
         
         let allActivities = [];
+        const counts = {
+          property_view: 0,
+          search: 0,
+          offer: 0,
+          page_visit: 0,
+          click: 0,
+          total: 0
+        };
         
         // For each VIP buyer, fetch their activity and combine it
         for (const buyer of vipBuyersToFetch) {
@@ -73,37 +90,52 @@ const ActivityWidget = () => {
             const summary = await ActivityDataProvider.getActivitySummary(buyer.id);
             
             // Combine all activities with buyer information
+            const propertyViews = (summary.propertyViews || []).map(item => ({ 
+              type: 'property_view', 
+              data: item, 
+              timestamp: item.timestamp || new Date().toISOString(),
+              buyerId: buyer.id 
+            }));
+            counts.property_view += propertyViews.length;
+            
+            const searches = (summary.searchHistory || []).map(item => ({ 
+              type: 'search', 
+              data: item, 
+              timestamp: item.timestamp || new Date().toISOString(),
+              buyerId: buyer.id 
+            }));
+            counts.search += searches.length;
+            
+            const pageVisits = (summary.pageVisits || []).map(item => ({ 
+              type: 'page_visit', 
+              data: item, 
+              timestamp: item.timestamp || new Date().toISOString(),
+              buyerId: buyer.id 
+            }));
+            counts.page_visit += pageVisits.length;
+            
+            const offers = (summary.offerHistory || []).map(item => ({ 
+              type: 'offer', 
+              data: item, 
+              timestamp: item.timestamp || new Date().toISOString(),
+              buyerId: buyer.id 
+            }));
+            counts.offer += offers.length;
+            
+            const clicks = (summary.clickEvents || []).map(item => ({ 
+              type: 'click', 
+              data: item, 
+              timestamp: item.timestamp || new Date().toISOString(),
+              buyerId: buyer.id 
+            }));
+            counts.click += clicks.length;
+            
             const buyerActivities = [
-              ...(summary.propertyViews || []).map(item => ({ 
-                type: 'property_view', 
-                data: item, 
-                timestamp: item.timestamp,
-                buyerId: buyer.id 
-              })),
-              ...(summary.searchHistory || []).map(item => ({ 
-                type: 'search', 
-                data: item, 
-                timestamp: item.timestamp,
-                buyerId: buyer.id 
-              })),
-              ...(summary.pageVisits || []).map(item => ({ 
-                type: 'page_visit', 
-                data: item, 
-                timestamp: item.timestamp,
-                buyerId: buyer.id 
-              })),
-              ...(summary.offerHistory || []).map(item => ({ 
-                type: 'offer', 
-                data: item, 
-                timestamp: item.timestamp,
-                buyerId: buyer.id 
-              })),
-              ...(summary.clickEvents || []).map(item => ({ 
-                type: 'click', 
-                data: item, 
-                timestamp: item.timestamp,
-                buyerId: buyer.id 
-              }))
+              ...propertyViews,
+              ...searches,
+              ...pageVisits,
+              ...offers,
+              ...clicks
             ];
             
             allActivities = [...allActivities, ...buyerActivities];
@@ -113,12 +145,57 @@ const ActivityWidget = () => {
           }
         }
         
-        // Sort by timestamp (newest first) and limit to 5 total
-        const sortedActivities = allActivities
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        counts.total = allActivities.length;
+        setActivityCounts(counts);
+        
+        // Sort by timestamp (newest first) and limit to 5 total per type
+        // First sort all activities by timestamp
+        allActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // Get top 5 for each type to ensure we have content for tabs
+        const topPropertyViews = allActivities
+          .filter(act => act.type === 'property_view')
+          .slice(0, 5);
+          
+        const topSearches = allActivities
+          .filter(act => act.type === 'search')
+          .slice(0, 5);
+          
+        const topOffers = allActivities
+          .filter(act => act.type === 'offer')
+          .slice(0, 5);
+          
+        const topPageVisits = allActivities
+          .filter(act => act.type === 'page_visit')
+          .slice(0, 5);
+          
+        const topClicks = allActivities
+          .filter(act => act.type === 'click')
           .slice(0, 5);
         
-        setActivities(sortedActivities);
+        // Combine all for the "All" tab, but limit to 5 total
+        const sortedActivities = allActivities
+          .slice(0, 5);
+        
+        // Create a lookup map for each activity type
+        const activitiesByType = {
+          'all': sortedActivities,
+          'property_view': topPropertyViews,
+          'search': topSearches,
+          'offer': topOffers,
+          'page_visit': topPageVisits,
+          'click': topClicks
+        };
+        
+        console.log(`Fetched activities with counts:`, counts);
+        console.log('Activities by type:', {
+          all: activitiesByType.all.length,
+          property_view: activitiesByType.property_view.length,
+          search: activitiesByType.search.length,
+          offer: activitiesByType.offer.length
+        });
+        
+        setActivities(allActivities);
         setError(null);
       } catch (err) {
         console.error("Error fetching activity data:", err);
@@ -187,7 +264,7 @@ const ActivityWidget = () => {
       case 'page_visit':
         return data.duration ? `Spent ${Math.floor(data.duration / 60)}m ${data.duration % 60}s` : '';
       case 'offer':
-        return data.propertyTitle || '';
+        return data.propertyTitle || data.propertyAddress || '';
       case 'click':
         return data.page || '';
       default:
@@ -215,8 +292,10 @@ const ActivityWidget = () => {
 
   // Filter activities based on active tab
   const filteredActivities = activeTab === 'all' 
-    ? activities 
-    : activities.filter(activity => activity.type === activeTab);
+    ? activities.slice(0, 5) // Limit to 5 for All tab 
+    : activities
+        .filter(activity => activity.type === activeTab)
+        .slice(0, 5); // Limit to 5 for other tabs
 
   // Loading skeleton
   if (loading) {
@@ -289,10 +368,38 @@ const ActivityWidget = () => {
             </Button>
             <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-fit">
               <TabsList className="bg-white">
-                <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-                <TabsTrigger value="property_view" className="text-xs">Views</TabsTrigger>
-                <TabsTrigger value="search" className="text-xs">Searches</TabsTrigger>
-                <TabsTrigger value="offer" className="text-xs">Offers</TabsTrigger>
+                <TabsTrigger value="all" className="text-xs">
+                  All
+                  {activityCounts.total > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
+                      {activityCounts.total}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="property_view" className="text-xs">
+                  Views
+                  {activityCounts.property_view > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
+                      {activityCounts.property_view}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="search" className="text-xs">
+                  Searches
+                  {activityCounts.search > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
+                      {activityCounts.search}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="offer" className="text-xs">
+                  Offers
+                  {activityCounts.offer > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
+                      {activityCounts.offer}
+                    </Badge>
+                  )}
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -301,8 +408,22 @@ const ActivityWidget = () => {
       <CardContent className="px-3 py-3">
         {filteredActivities.length === 0 ? (
           <div className="text-center py-6 text-gray-500">
-            <p className="mb-2">No recent activity found</p>
-            <p className="text-xs">Activity tracking is available for VIP buyers</p>
+            {activeTab === 'all' ? (
+              <>
+                <p className="mb-2">No recent activity found</p>
+                <p className="text-xs">Activity tracking is available for VIP buyers</p>
+              </>
+            ) : (
+              <div className="flex flex-col items-center">
+                <AlertCircle className="h-6 w-6 text-gray-400 mb-2" />
+                <p className="mb-1">No {activeTab.replace('_', ' ')} activity</p>
+                <p className="text-xs">
+                  {activeTab === 'property_view' && "No recent property views by VIP buyers"}
+                  {activeTab === 'search' && "No recent searches by VIP buyers"}
+                  {activeTab === 'offer' && "No recent offers by VIP buyers"}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
