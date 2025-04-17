@@ -123,15 +123,48 @@ export const getPropertyOffers = async (propertyId) => {
 };
 
 // Get offers for a specific buyer
-export const getBuyerOffers = async (buyerId) => {
+// Updated getBuyerOffers function in client/src/utils/api.js
+
+export const getBuyerOffers = async (params) => {
   try {
-    // Query parameter approach
-    const response = await api.get(`/buyer/offers/buyer?buyerId=${buyerId}`);
+    // Handle different parameter formats
+    let endpoint;
+    
+    if (typeof params === 'string') {
+      // Direct buyerId as string
+      endpoint = `/buyer/offers/buyer?buyerId=${params}`;
+    } else if (params && typeof params === 'object') {
+      // Object with parameters - extract the buyerId properly
+      if (params.buyerId) {
+        if (typeof params.buyerId === 'object') {
+          console.error('Invalid buyerId format:', params.buyerId);
+          return { offers: [] };
+        }
+        endpoint = `/buyer/offers/buyer?buyerId=${params.buyerId}`;
+      } else if (params.email) {
+        endpoint = `/buyer/offers/buyer?email=${encodeURIComponent(params.email)}`;
+      } else if (params.phone) {
+        endpoint = `/buyer/offers/buyer?phone=${encodeURIComponent(params.phone)}`;
+      } else {
+        console.error('Missing required parameter in getBuyerOffers:', params);
+        return { offers: [] };
+      }
+    } else {
+      console.error('Invalid parameters for getBuyerOffers:', params);
+      return { offers: [] };
+    }
+    
+    console.log(`Making GET request to ${endpoint}`);
+    const response = await api.get(endpoint);
     return response.data;
   } catch (error) {
     console.error("Error fetching buyer offers:", error);
-    // Return empty array instead of throwing to avoid breaking the UI
-    return { offers: [] };
+    // Return empty object with offers array to avoid UI errors
+    return { 
+      offers: [],
+      buyer: null,
+      totalOffers: 0 
+    };
   }
 };
 
