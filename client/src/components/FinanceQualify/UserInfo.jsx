@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { parsePhoneNumber } from "libphonenumber-js";
-import { useAuth0 } from "@auth0/auth0-react";
 import { useAuth } from "@/components/hooks/useAuth";
-import { useVipBuyer } from "@/utils/VipBuyerContext";
+import { useUserProfileApi } from '@/utils/api';
+import { useVipBuyer } from '@/utils/VipBuyerContext';
 import { 
   Card, 
   CardContent 
@@ -20,14 +20,6 @@ import {
 } from "@/components/ui/dialog";
 
 export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBack }) {
-  // Get user data from different sources
-  const { user: auth0User } = useAuth0();
-  const { userRoles, userPermissions } = useAuth();
-  const { isVipBuyer, vipBuyerData } = useVipBuyer();
-  
-  // Check if user is a non-system user (no roles or permissions)
-  const isNonSystemUser = auth0User && userRoles.length === 0 && userPermissions.length === 0;
-  
   // Initialize local form state from parent surveyData
   const [formData, setFormData] = useState({
     firstName: surveyData.firstName || "",
@@ -35,83 +27,107 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
     email: surveyData.email || "",
     phone: surveyData.phone || ""
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   // State for the Dialog notification
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("warning");
 
-  // Auto-fill data for non-system users
+  // Get user data from different sources
+  const { user: authUser } = useAuth();
+  const { getUserProfile } = useUserProfileApi();
+  const { vipBuyerData, isVipBuyer } = useVipBuyer();
+
+  // Auto-populate user data from database or Auth0
   useEffect(() => {
-    if (isNonSystemUser) {
-      // Data priority: 1. Local Storage, 2. VIP Buyer Data, 3. Auth0
+    const populateUserData = async () => {
+      setIsLoading(true);
+      let userData = {
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: ""
+      };
       
-      // Try to get data from localStorage first
-      const savedData = localStorage.getItem('vipSignupData');
-      let dataFromLocalStorage = null;
-      
-      if (savedData) {
+      // Priority 1: Try to get data from VIP Buyer database
+      if (isVipBuyer && vipBuyerData) {
+        userData = {
+          firstName: vipBuyerData.firstName || userData.firstName,
+          lastName: vipBuyerData.lastName || userData.lastName,
+          email: vipBuyerData.email || userData.email,
+          phone: vipBuyerData.phone ? formatPhoneNumber(vipBuyerData.phone) : userData.phone
+        };
+      } else {
+        // Try to get from database user profile
         try {
-          dataFromLocalStorage = JSON.parse(savedData);
-        } catch (e) {
-          console.error("Error parsing saved form data:", e);
+          const userProfile = await getUserProfile();
+          if (userProfile) {
+            userData = {
+              firstName: userProfile.firstName || userData.firstName,
+              lastName: userProfile.lastName || userData.lastName,
+              email: userProfile.email || userData.email,
+              phone: userProfile.phone ? formatPhoneNumber(userProfile.phone) : userData.phone
+            };
+          }
+        } catch (error) {
+          console.log("No user profile found in database, falling back to Auth0");
+        }
+        
+        // Priority 2: Fallback to Auth0 data if available
+        if (authUser) {
+          // Try to extract first/last name from Auth0 name if available
+          if (authUser.name && (!userData.firstName || !userData.lastName)) {
+            const nameParts = authUser.name.split(' ');
+            if (nameParts.length >= 2) {
+              userData.firstName = userData.firstName || nameParts[0];
+              userData.lastName = userData.lastName || nameParts.slice(1).join(' ');
+            } else if (nameParts.length === 1) {
+              userData.firstName = userData.firstName || nameParts[0];
+            }
+          }
+          
+          // Check if we have given_name and family_name from Auth0
+          if (authUser.given_name && !userData.firstName) userData.firstName = authUser.given_name;
+          if (authUser.family_name && !userData.lastName) userData.lastName = authUser.family_name;
+          
+          // Use Auth0 email as fallback
+          if (authUser.email && !userData.email) userData.email = authUser.email;
         }
       }
       
-      // Initialize with data from appropriate source based on priority
-      const newFormData = {
-        firstName: 
-          // Priority 1: Local Storage
-          (dataFromLocalStorage?.firstName) || 
-          // Priority 2: VIP Buyer Data
-          (isVipBuyer && vipBuyerData?.firstName) || 
-          // Priority 3: Auth0 Data
-          auth0User?.given_name || 
-          (auth0User?.name && !auth0User.name.includes('@') ? auth0User.name.split(' ')[0] : "") || 
-          formData.firstName,
-          
-        lastName: 
-          (dataFromLocalStorage?.lastName) || 
-          (isVipBuyer && vipBuyerData?.lastName) || 
-          auth0User?.family_name || 
-          (auth0User?.name && !auth0User.name.includes('@') && auth0User.name.split(' ').length > 1 
-            ? auth0User.name.split(' ').slice(1).join(' ') 
-            : "") || 
-          formData.lastName,
-          
-        email: 
-          (dataFromLocalStorage?.email) || 
-          (isVipBuyer && vipBuyerData?.email) || 
-          auth0User?.email || 
-          formData.email,
-          
-        phone: 
-          (dataFromLocalStorage?.phone) || 
-          (isVipBuyer && vipBuyerData?.phone) || 
-          formData.phone
-      };
+      // Update both local and parent state with the populated data
+      setFormData(userData);
       
-      // Update local state
-      setFormData(newFormData);
-      
-      // Update parent state
-      Object.keys(newFormData).forEach(key => {
-        if (newFormData[key]) {
-          updateSurveyData(key, newFormData[key]);
+      // Update parent state with populated values
+      Object.entries(userData).forEach(([key, value]) => {
+        if (value) {
+          updateSurveyData(key, value);
         }
       });
+      
+      setIsLoading(false);
+    };
+
+    // Only auto-populate if the fields are empty
+    if (!formData.firstName && !formData.lastName && !formData.email && !formData.phone) {
+      populateUserData();
+    } else {
+      setIsLoading(false);
     }
-  }, [isNonSystemUser, auth0User, isVipBuyer, vipBuyerData, updateSurveyData]);
+  }, [isVipBuyer, vipBuyerData, authUser, getUserProfile, updateSurveyData]);
 
   // Update local state if surveyData changes
   useEffect(() => {
-    setFormData({
-      firstName: surveyData.firstName || "",
-      lastName: surveyData.lastName || "",
-      email: surveyData.email || "",
-      phone: surveyData.phone || ""
-    });
-  }, [surveyData]);
+    if (!isLoading) {
+      setFormData({
+        firstName: surveyData.firstName || "",
+        lastName: surveyData.lastName || "",
+        email: surveyData.email || "",
+        phone: surveyData.phone || ""
+      });
+    }
+  }, [surveyData, isLoading]);
 
   // Handle input changes
   const handleChange = (e) => {

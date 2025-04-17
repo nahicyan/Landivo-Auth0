@@ -5,9 +5,10 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../utils/api";
 import { parsePhoneNumber } from "libphonenumber-js";
 import ContactCard from "@/components/ContactCard/ContactCard";
-// Add Auth0 and VIP buyer imports
-import { useAuth0 } from "@auth0/auth0-react";
-import { useVipBuyer } from "@/utils/VipBuyerContext";
+import { useAuth } from "@/components/hooks/useAuth";
+import { useUserProfileApi } from '@/utils/api';
+import { useVipBuyer } from '@/utils/VipBuyerContext';
+
 
 // ShadCN UI components
 import {
@@ -53,93 +54,85 @@ export default function Offer({ propertyData }) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   // State for the Dialog notification
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
 
-  // Get Auth0 user data and VIP buyer data
-  const { isAuthenticated, user } = useAuth0();
-  const { isVipBuyer, vipBuyerData } = useVipBuyer();
-  
-  // Auto-fill form data when component mounts
+  // Get user data from different sources
+  const { user: authUser } = useAuth();
+  const { getUserProfile } = useUserProfileApi();
+  const { vipBuyerData, isVipBuyer } = useVipBuyer();
+
+  // Auto-populate fields based on available data sources
   useEffect(() => {
-    // Only auto-fill if the user is authenticated
-    if (isAuthenticated) {
-      // Check local storage first
-      const savedFormData = localStorage.getItem('offerFormData');
-      let storedData = null;
+    const populateUserData = async () => {
+      setIsLoading(true);
       
-      if (savedFormData) {
-        try {
-          storedData = JSON.parse(savedFormData);
-          
-          // Use local storage data if it exists and has values
-          if (storedData) {
-            setFirstName(storedData.firstName || '');
-            setLastName(storedData.lastName || '');
-            setEmail(storedData.email || '');
-            setPhone(storedData.phone || '');
-            setBuyerType(storedData.buyerType || '');
-            
-            console.log('Form data loaded from local storage');
-            return; // Don't continue if we found local storage data
-          }
-        } catch (error) {
-          console.error('Error parsing saved form data:', error);
-        }
-      }
-      
-      // If no local storage or failed to parse, check if user is a VIP buyer
+      // Priority 1: Database Buyer info (VIP Buyer data or user profile)
       if (isVipBuyer && vipBuyerData) {
-        setFirstName(vipBuyerData.firstName || '');
-        setLastName(vipBuyerData.lastName || '');
-        setEmail(vipBuyerData.email || '');
-        setPhone(vipBuyerData.phone || '');
-        setBuyerType(vipBuyerData.buyerType || '');
-        console.log('Form data loaded from VIP buyer profile');
+        // Use VIP Buyer data
+        setFirstName(vipBuyerData.firstName || "");
+        setLastName(vipBuyerData.lastName || "");
+        setEmail(vipBuyerData.email || "");
+        setPhone(vipBuyerData.phone ? formatPhoneNumber(vipBuyerData.phone) : "");
+        setBuyerType(vipBuyerData.buyerType || "");
+        setIsLoading(false);
         return;
       }
       
-      // If not a VIP buyer, use Auth0 data
-      if (user) {
-        // Extract first and last name from Auth0 user object
-        if (user.given_name) setFirstName(user.given_name);
-        if (user.family_name) setLastName(user.family_name);
-        // If no given/family name, try to parse from name
-        else if (user.name && !user.name.includes('@')) {
-          const nameParts = user.name.split(' ');
-          if (nameParts.length > 0) setFirstName(nameParts[0]);
-          if (nameParts.length > 1) setLastName(nameParts.slice(1).join(' '));
-        } else if (user.nickname && !user.nickname.includes('@')) {
-          setFirstName(user.nickname);
+      // Try getting user profile from database
+      try {
+        const userProfile = await getUserProfile();
+        if (userProfile) {
+          setFirstName(userProfile.firstName || "");
+          setLastName(userProfile.lastName || "");
+          setEmail(userProfile.email || "");
+          // Phone might not be in user profile, but we'll check
+          if (userProfile.phone) {
+            setPhone(formatPhoneNumber(userProfile.phone));
+          }
+          // Buyer type might not be in user profile
+          if (userProfile.buyerType) {
+            setBuyerType(userProfile.buyerType);
+          }
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.log("No user profile found in database, falling back to Auth0");
+      }
+      
+      // Priority 2: Auth0 data
+      if (authUser) {
+        // Try to extract first/last name from Auth0 name if available
+        if (authUser.name) {
+          const nameParts = authUser.name.split(' ');
+          if (nameParts.length >= 2) {
+            setFirstName(nameParts[0] || "");
+            setLastName(nameParts.slice(1).join(' ') || "");
+          } else if (nameParts.length === 1) {
+            setFirstName(nameParts[0] || "");
+          }
         }
         
-        // Use email from Auth0
-        if (user.email) setEmail(user.email);
+        // Or use given_name and family_name if available
+        if (authUser.given_name) setFirstName(authUser.given_name);
+        if (authUser.family_name) setLastName(authUser.family_name);
         
-        console.log('Form data loaded from Auth0 user data');
+        // Use Auth0 email
+        setEmail(authUser.email || "");
+        
+        // Auth0 typically doesn't provide phone or buyer type
       }
-    }
-  }, [isAuthenticated, user, isVipBuyer, vipBuyerData]);
-
-  // Save form data to local storage whenever it changes
-  useEffect(() => {
-    // Only save if at least one field has been filled out
-    if (firstName || lastName || email || phone || buyerType) {
-      const formData = {
-        firstName,
-        lastName,
-        email,
-        phone,
-        buyerType,
-        lastUpdated: new Date().toISOString()
-      };
       
-      localStorage.setItem('offerFormData', JSON.stringify(formData));
-    }
-  }, [firstName, lastName, email, phone, buyerType]);
+      setIsLoading(false);
+    };
+
+    populateUserData();
+  }, [isVipBuyer, vipBuyerData, authUser, getUserProfile]);
 
   // Format the offer price as the user types
   const handleOfferPriceChange = (e) => {
@@ -248,9 +241,6 @@ export default function Offer({ propertyData }) {
       setDialogMessage("Offer submitted successfully!");
       setDialogType("success");
       setDialogOpen(true);
-      
-      // After successful submission, clear the stored form data
-      localStorage.removeItem('offerFormData');
     } catch (error) {
       setDialogMessage(
         "You've already offered this or a higher amount. Please adjust your offer to continue!"
@@ -382,8 +372,8 @@ export default function Offer({ propertyData }) {
             </Button>
           </form>
           <div className="py-6">
-            <ContactCard />
-          </div>
+      <ContactCard />
+    </div>
         </CardContent>
       </Card>
 
