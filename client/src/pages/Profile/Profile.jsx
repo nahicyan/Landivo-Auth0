@@ -40,8 +40,13 @@ const Profile = () => {
   // Load user profile data only for system users
   useEffect(() => {
     const loadUserProfile = async () => {
-      // Only attempt to load profile data for system users, not VIP buyers without roles
-      if (isAuthenticated && user?.sub && isSystemUser) {
+      // Only fetch if authenticated, a system user, and we don't already have data
+      if (isAuthenticated && user?.sub && isSystemUser && !isLoadingProfile) {
+        // Skip if we already have data
+        if (dbUserData && !profileError) {
+          return;
+        }
+        
         try {
           setIsLoadingProfile(true);
           setProfileError(null);
@@ -55,7 +60,6 @@ const Profile = () => {
           }
         } catch (error) {
           console.error("Error loading user profile:", error);
-          // Don't show the error for VIP buyers who don't have system profiles
           if (isSystemUser) {
             setProfileError("Unable to load your profile information. Please try again later.");
           }
@@ -64,9 +68,9 @@ const Profile = () => {
         }
       }
     };
-
+  
     loadUserProfile();
-  }, [isAuthenticated, user, getUserProfile, isSystemUser]);
+  }, [isAuthenticated, user, getUserProfile, isSystemUser, dbUserData, profileError, isLoadingProfile]);
 
   // Handle profile form submission
   const handleSubmit = async (e) => {

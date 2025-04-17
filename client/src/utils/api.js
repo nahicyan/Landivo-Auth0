@@ -2,7 +2,7 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 export const api = axios.create({
   baseURL: `${import.meta.env.VITE_SERVER_URL}/api`, //
@@ -519,14 +519,23 @@ export const getDealFinancialSummary = async (id) => {
 // Create a custom hook for authenticated user profile operations
 export function useUserProfileApi() {
   const { getAccessTokenSilently } = useAuth0();
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const MIN_FETCH_INTERVAL = 10000; // 10 seconds minimum between fetches
   
-  // Get user profile - with auth token
-  const getUserProfile = useCallback(async () => {
+  const getUserProfile = useCallback(async (force = false) => {
     try {
-      // Get the Auth0 token first
-      const token = await getAccessTokenSilently();
+      const now = Date.now();
       
-      // Make the API request with the token in the Authorization header
+      // Skip if called too frequently unless forced
+      if (!force && now - lastFetchTime < MIN_FETCH_INTERVAL) {
+        console.log("Skipping profile fetch - called too frequently");
+        return null;
+      }
+      
+      // Get token and fetch profile
+      const token = await getAccessTokenSilently();
+      setLastFetchTime(now);
+      
       const response = await api.get('/user/profile', {
         headers: {
           Authorization: `Bearer ${token}`
@@ -536,13 +545,9 @@ export function useUserProfileApi() {
       return response.data;
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      if (error.response?.status === 401) {
-        // Token might be expired or invalid
-        console.log("Authentication error: Your session may have expired");
-      }
       throw error;
     }
-  }, [getAccessTokenSilently]);
+  }, [getAccessTokenSilently, lastFetchTime]);
   
   // Update user profile - with auth token
   const updateUserProfile = useCallback(async (profileData) => {
@@ -669,3 +674,4 @@ export const getUserAccountById = async (id) => {
     handleRequestError(error, "Failed to fetch user account");
   }
 };
+

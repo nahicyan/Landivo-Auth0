@@ -6,6 +6,11 @@ import { prisma } from "../config/prismaConfig.js";
  * Records actions in the ActivityLog table
  */
 export const trackActivity = asyncHandler(async (req, res, next) => {
+    // Skip tracking for frequently accessed endpoints
+    const skipTrackingForEndpoints = ['/api/user/profile'];
+    if (skipTrackingForEndpoints.some(endpoint => req.originalUrl.includes(endpoint))) {
+      return next();
+    }
   // Get original response end method
   const originalEnd = res.end;
   

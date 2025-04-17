@@ -1,7 +1,7 @@
 // client/src/utils/apiInterceptor.js
 import { api } from './api';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 /**
  * Hook to set up axios interceptors that automatically add the Auth0 token
@@ -9,24 +9,42 @@ import { useEffect } from 'react';
  */
 export function useApiAuthInterceptor() {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const [cachedToken, setCachedToken] = useState(null);
+  const [lastTokenFetch, setLastTokenFetch] = useState(0);
+  const TOKEN_TTL = 5 * 60 * 1000; // 5 minutes
+  
+  const getTokenCached = useCallback(async () => {
+    const now = Date.now();
+    if (!cachedToken || now - lastTokenFetch > TOKEN_TTL) {
+      try {
+        const token = await getAccessTokenSilently();
+        setCachedToken(token);
+        setLastTokenFetch(now);
+        return token;
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        return cachedToken;
+      }
+    }
+    return cachedToken;
+  }, [getAccessTokenSilently, cachedToken, lastTokenFetch]);
   
   useEffect(() => {
-    // Set up request interceptor to add token
     const interceptorId = api.interceptors.request.use(
       async (config) => {
-        // Only add the token if the user is authenticated
         if (isAuthenticated) {
           try {
-            // Get a fresh token for each request
-            const token = await getAccessTokenSilently();
+            const token = await getTokenCached();
             if (token) {
-              // Add the token to the request headers
               config.headers.Authorization = `Bearer ${token}`;
-              console.log(`Added auth token to request: ${config.url}`);
+              
+              // Reduce logging
+              if (!config.url?.includes('/user/profile')) {
+                console.log(`Added auth token to request: ${config.url}`);
+              }
             }
           } catch (error) {
-            console.error('Error getting access token for request:', error);
-            // Let the request proceed without the token
+            console.error('Error getting access token:', error);
           }
         }
         return config;
@@ -34,19 +52,8 @@ export function useApiAuthInterceptor() {
       (error) => Promise.reject(error)
     );
     
-    // Clean up function to remove the interceptor when the component unmounts
     return () => {
       api.interceptors.request.eject(interceptorId);
     };
-  }, [getAccessTokenSilently, isAuthenticated]);
-  
-  // No need to return anything, the interceptor works automatically
+  }, [getTokenCached, isAuthenticated]);
 }
-
-// Usage example:
-// 1. Import this hook in your App.jsx component
-// 2. Call it at the top level to set up the interceptors for all api calls
-// function App() {
-//   useApiAuthInterceptor();
-//   return (/* your app components */);
-// }
